@@ -41,7 +41,6 @@
       display: flex;
       flex-direction: column;
       margin-right: 6px;
-      padding-top: 0;
     }
     .rank-label {
       height: 72px;
@@ -66,7 +65,6 @@
     .file-labels {
       display: flex;
       margin-top: 6px;
-      padding-left: 0;
     }
     .file-label {
       width: 72px;
@@ -94,7 +92,6 @@
 
     .sq.last-from { background: #cdd16f !important; }
     .sq.last-to   { background: #aaa23a !important; }
-
     .sq.selected  { background: #7fc97f !important; }
 
     .sq.dot::after {
@@ -106,13 +103,8 @@
       border-radius: 50%;
       pointer-events: none;
     }
-
-    .sq.ring {
-      box-shadow: inset 0 0 0 5px rgba(0,0,0,0.25);
-    }
-
+    .sq.ring { box-shadow: inset 0 0 0 5px rgba(0,0,0,0.25); }
     .sq.in-check { background: #c0392b !important; }
-
     .sq:hover { filter: brightness(1.08); }
 
     /* piece text */
@@ -209,8 +201,34 @@
     .btn:hover  { background: #ddb030; }
     .btn:active { transform: scale(0.97); }
 
+    .btn-outline {
+      width: 100%;
+      background: transparent;
+      color: #7a9cc9;
+      border: 1.5px solid #7a9cc9;
+      border-radius: 8px;
+      padding: 9px;
+      font-size: 0.88rem;
+      font-weight: 700;
+      cursor: pointer;
+      letter-spacing: 0.5px;
+      transition: background 0.15s, color 0.15s;
+    }
+    .btn-outline:hover:not(:disabled) { background: #7a9cc9; color: #0f0f1a; }
+    .btn-outline:disabled { opacity: 0.5; cursor: default; }
+
+    .mp-status {
+      margin-top: 8px;
+      font-size: 0.78rem;
+      color: #7a9cc9;
+      min-height: 14px;
+      line-height: 1.5;
+      word-break: break-all;
+    }
+    .mp-status.error { color: #e07070; }
+
     .move-list {
-      max-height: 280px;
+      max-height: 240px;
       overflow-y: auto;
       scrollbar-width: thin;
       scrollbar-color: #2a3a5a transparent;
@@ -311,6 +329,13 @@
 
     <button class="btn" onclick="newGame()">New Game</button>
 
+    <!-- Online play -->
+    <div class="card">
+      <div class="card-title">Online Play</div>
+      <button class="btn-outline" id="shareBtn" onclick="hostGame()">Share Link to Invite</button>
+      <div class="mp-status" id="mpStatus"></div>
+    </div>
+
     <!-- Move history -->
     <div class="card">
       <div class="card-title">Move History</div>
@@ -327,20 +352,21 @@
   </div>
 </div>
 
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script>
 'use strict';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const SYM = { king:'♚', queen:'♛', rook:'♜', bishop:'♝', knight:'♞', pawn:'♟' };
-
 const PIECE_LETTER = { king:'K', queen:'Q', rook:'R', bishop:'B', knight:'N', pawn:'' };
+const HOSTED_URL = 'https://d4ff0.github.io/chess-game/chess.html';
 
 // ─── Game state ───────────────────────────────────────────────────────────────
 
 let board, turn, selected, epTarget, castle, over, history, pending, lastMove, captured;
 
-function newGame() {
+function newGame(broadcast = true) {
   board     = makeStartBoard();
   turn      = 'white';
   selected  = null;
@@ -351,6 +377,7 @@ function newGame() {
   pending   = null;
   lastMove  = null;
   captured  = { white: [], black: [] };
+  if (broadcast && mpConn?.open) mpConn.send({ type: 'new-game' });
   render();
 }
 
@@ -393,8 +420,8 @@ function pseudoMoves(b, r, c, ep) {
   };
 
   if (t === 'pawn') {
-    const d   = col==='white' ? -1 : 1;
-    const sr  = col==='white' ? 6  : 1;
+    const d  = col==='white' ? -1 : 1;
+    const sr = col==='white' ? 6  : 1;
     if (emp(r+d,c)) {
       moves.push([r+d,c]);
       if (r===sr && emp(r+2*d,c)) moves.push([r+2*d,c]);
@@ -444,7 +471,6 @@ function legalMoves(r, c) {
 
   for (const [tr,tc] of pseudoMoves(board,r,c,epTarget)) {
     const tb = clone(board);
-    // en passant removal
     if (p.t==='pawn' && epTarget && tr===epTarget[0] && tc===epTarget[1])
       tb[p.c==='white'?tr+1:tr-1][tc] = null;
     tb[tr][tc] = tb[r][c];
@@ -452,17 +478,14 @@ function legalMoves(r, c) {
     if (!inCheck(tb, p.c)) legal.push([tr,tc]);
   }
 
-  // castling
   if (p.t==='king' && !inCheck(board, turn)) {
     const kr = turn==='white' ? 7 : 0;
     if (r===kr && c===4) {
       const rights = castle[turn];
-      // kingside
       if (rights.k && !board[kr][5] && !board[kr][6]
           && board[kr][7]?.t==='rook' && board[kr][7]?.c===turn
           && !attacked(board,kr,5,opp) && !attacked(board,kr,6,opp))
         legal.push([kr,6]);
-      // queenside
       if (rights.q && !board[kr][3] && !board[kr][2] && !board[kr][1]
           && board[kr][0]?.t==='rook' && board[kr][0]?.c===turn
           && !attacked(board,kr,3,opp) && !attacked(board,kr,2,opp))
@@ -476,10 +499,9 @@ function hasAnyLegal(color) {
   for (let r=0; r<8; r++)
     for (let c=0; c<8; c++) {
       if (board[r][c]?.c !== color) continue;
-      const savedTurn = turn;
-      turn = color;
+      const saved = turn; turn = color;
       const m = legalMoves(r,c);
-      turn = savedTurn;
+      turn = saved;
       if (m.length) return true;
     }
   return false;
@@ -487,50 +509,42 @@ function hasAnyLegal(color) {
 
 // ─── Make a move ─────────────────────────────────────────────────────────────
 
-function applyMove(fr, fc, tr, tc, promo='queen') {
+function applyMove(fr, fc, tr, tc, promo='queen', send=true) {
   const p    = board[fr][fc];
   const capt = board[tr][tc];
   const opp  = p.c==='white'?'black':'white';
   let note   = '';
   let isCastle = false;
 
-  // track captured piece (for display)
   if (capt) captured[p.c].push(capt.t);
 
-  // en passant removal
   if (p.t==='pawn' && epTarget && tr===epTarget[0] && tc===epTarget[1]) {
     const epRow = p.c==='white' ? tr+1 : tr-1;
     captured[p.c].push(board[epRow][tc].t);
     board[epRow][tc] = null;
   }
 
-  // set new en passant target
   epTarget = (p.t==='pawn' && Math.abs(tr-fr)===2) ? [(fr+tr)/2, tc] : null;
 
-  // castling – move rook
   if (p.t==='king') {
     if (tc===6 && fc===4) { board[fr][5]=board[fr][7]; board[fr][7]=null; isCastle=true; note='O-O'; }
     if (tc===2 && fc===4) { board[fr][3]=board[fr][0]; board[fr][0]=null; isCastle=true; note='O-O-O'; }
     castle[p.c].k = castle[p.c].q = false;
   }
 
-  // rook move revokes castling rights
   if (p.t==='rook') {
     if (fc===0) castle[p.c].q = false;
     if (fc===7) castle[p.c].k = false;
   }
 
-  // if enemy rook is captured, revoke its castling rights
   if (capt?.t==='rook') {
     if (tc===0) castle[opp].q = false;
     if (tc===7) castle[opp].k = false;
   }
 
-  // execute move
   board[tr][tc] = p;
   board[fr][fc] = null;
 
-  // promotion
   let isPromo = false;
   if (p.t==='pawn' && (tr===0||tr===7)) {
     board[tr][tc] = {t:promo, c:p.c};
@@ -539,22 +553,16 @@ function applyMove(fr, fc, tr, tc, promo='queen') {
 
   lastMove = { fr, fc, tr, tc };
 
-  // notation
   if (!isCastle) {
-    const sym   = PIECE_LETTER[p.t];
-    const dest  = String.fromCharCode(97+tc) + (8-tr);
-    const xmark = (capt || (p.t==='pawn'&&isPromo===false&&epTarget===null&&false)) ? 'x' : '';
+    const dest = String.fromCharCode(97+tc) + (8-tr);
     if (p.t==='pawn') {
-      note = capt||isPromo
-        ? String.fromCharCode(97+fc) + 'x' + dest
-        : dest;
-      if (isPromo) note += '=' + PIECE_LETTER[promo]||'Q';
+      note = capt||isPromo ? String.fromCharCode(97+fc) + 'x' + dest : dest;
+      if (isPromo) note += '=' + (PIECE_LETTER[promo]||'Q');
     } else {
-      note = sym + (capt?'x':'') + dest;
+      note = PIECE_LETTER[p.t] + (capt?'x':'') + dest;
     }
   }
 
-  // switch turn & check game over
   const nextColor = p.c==='white' ? 'black' : 'white';
   const checked   = inCheck(board, nextColor);
   turn = nextColor;
@@ -567,12 +575,15 @@ function applyMove(fr, fc, tr, tc, promo='queen') {
   }
 
   history.push({ note, color: p.c });
+
+  if (send && mpConn?.open) mpConn.send({ type:'move', fr, fc, tr, tc, promo });
 }
 
 // ─── UI interaction ───────────────────────────────────────────────────────────
 
 function clickSquare(r, c) {
   if (over || pending) return;
+  if (mpColor && turn !== mpColor) return;
 
   if (selected) {
     const [sr,sc] = selected;
@@ -608,7 +619,7 @@ function showPromo(color) {
   choices.innerHTML = '';
   ['queen','rook','bishop','knight'].forEach(type => {
     const btn = document.createElement('div');
-    btn.className   = 'promo-btn';
+    btn.className = 'promo-btn';
     const icon = document.createElement('span');
     icon.className = `piece ${color === 'white' ? 'pw' : 'pb'}`;
     icon.textContent = SYM[type];
@@ -637,13 +648,10 @@ function render() {
 }
 
 function renderBoard() {
-  const el     = document.getElementById('board');
+  const el = document.getElementById('board');
   el.innerHTML = '';
 
-  const opp        = turn==='white'?'black':'white';
-  const checkedKing = inCheck(board,turn) && !over
-    ? findKing(board,turn) : null;
-
+  const checkedKing = inCheck(board,turn) && !over ? findKing(board,turn) : null;
   const dotMoves = selected ? new Set(
     legalMoves(selected[0],selected[1]).map(([r,c])=>r+','+c)
   ) : new Set();
@@ -661,7 +669,7 @@ function renderBoard() {
 
       const key = r+','+c;
       if (dotMoves.has(key)) {
-        if (board[r][c]) sq.classList.add('ring'); else sq.classList.add('dot');
+        sq.classList.add(board[r][c] ? 'ring' : 'dot');
       }
       if (checkedKing && checkedKing[0]===r && checkedKing[1]===c) sq.classList.add('in-check');
 
@@ -693,28 +701,23 @@ function renderSidebar() {
     const checked = inCheck(board, turn);
     dot.className = 'turn-dot ' + (checked ? (turn==='white'?'black':'white') : turn);
     turnTxt.textContent = 'Game Over';
-    if (checked) {
-      const winner = turn==='white' ? 'Black' : 'White';
-      msg.textContent = winner + ' wins by checkmate!';
-    } else {
-      msg.textContent = 'Stalemate — Draw!';
-    }
+    msg.textContent = checked
+      ? (turn==='white' ? 'Black' : 'White') + ' wins by checkmate!'
+      : 'Stalemate — Draw!';
   } else {
     dot.className   = 'turn-dot ' + turn;
     turnTxt.textContent = (turn==='white'?'White':'Black') + "'s turn";
     msg.textContent = inCheck(board,turn) ? 'Check!' : '';
   }
 
-  // captured pieces
   const ORDER = ['queen','rook','bishop','knight','pawn'];
-  const sortedCap = (arr) => [...arr].sort((a,b)=>ORDER.indexOf(a)-ORDER.indexOf(b));
+  const sortedCap = arr => [...arr].sort((a,b)=>ORDER.indexOf(a)-ORDER.indexOf(b));
 
-  const wCap = document.getElementById('whiteCaptured');
-  const bCap = document.getElementById('blackCaptured');
-  wCap.innerHTML = sortedCap(captured.white).map(t=>`<span class="pb">${SYM[t]}</span>`).join('');
-  bCap.innerHTML = sortedCap(captured.black).map(t=>`<span class="pw">${SYM[t]}</span>`).join('');
+  document.getElementById('whiteCaptured').innerHTML =
+    sortedCap(captured.white).map(t=>`<span class="pb">${SYM[t]}</span>`).join('');
+  document.getElementById('blackCaptured').innerHTML =
+    sortedCap(captured.black).map(t=>`<span class="pw">${SYM[t]}</span>`).join('');
 
-  // move history
   const list = document.getElementById('moveList');
   list.innerHTML = '';
   for (let i=0; i<history.length; i+=2) {
@@ -746,20 +749,133 @@ function renderSidebar() {
   const files = document.getElementById('fileLabels');
   for (let r=0;r<8;r++) {
     const d = document.createElement('div');
-    d.className   = 'rank-label';
+    d.className = 'rank-label';
     d.textContent = 8-r;
     ranks.appendChild(d);
   }
   for (const f of 'abcdefgh') {
     const d = document.createElement('div');
-    d.className   = 'file-label';
+    d.className = 'file-label';
     d.textContent = f;
     files.appendChild(d);
   }
 })();
 
+// ─── Multiplayer (PeerJS) ─────────────────────────────────────────────────────
+
+let mpPeer = null;
+let mpConn = null;
+let mpColor = null; // 'white' | 'black' | null
+
+function hostGame() {
+  if (mpPeer) { mpPeer.destroy(); mpPeer = null; mpConn = null; }
+  mpColor = null;
+  const btn = document.getElementById('shareBtn');
+  btn.disabled = true;
+  setMpStatus('Connecting...');
+
+  mpPeer = new Peer();
+
+  mpPeer.on('open', id => {
+    mpColor = 'white';
+    newGame(false);
+    const url = `${HOSTED_URL}?room=${id}`;
+    navigator.clipboard.writeText(url)
+      .then(() => setMpStatus('Link copied! Send it to your friend.\nYou play as White.'))
+      .catch(() => setMpStatus('Share this link:\n' + url));
+    btn.textContent = 'Cancel';
+    btn.disabled = false;
+    btn.onclick = cancelMp;
+  });
+
+  mpPeer.on('connection', c => {
+    mpConn = c;
+    wireConn();
+    mpConn.on('open', () => {
+      setMpStatus('Opponent joined! You play White.');
+      mpConn.send({ type: 'sync', board, turn, epTarget, castle, history, captured, lastMove, over });
+    });
+  });
+
+  mpPeer.on('error', err => {
+    setMpStatus('Error: ' + err.type, true);
+    mpColor = null;
+    resetShareBtn();
+  });
+}
+
+function joinGame(roomId) {
+  mpPeer = new Peer();
+  mpColor = 'black';
+  setMpStatus('Joining game...');
+
+  mpPeer.on('open', () => {
+    mpConn = mpPeer.connect(roomId, { reliable: true });
+    wireConn();
+    mpConn.on('open', () => {
+      setMpStatus('Connected! Waiting for board sync…');
+    });
+  });
+
+  mpPeer.on('error', () => {
+    setMpStatus('Could not connect — link may have expired.', true);
+    mpColor = null;
+  });
+}
+
+function wireConn() {
+  mpConn.on('data', data => {
+    if (data.type === 'move') {
+      applyMove(data.fr, data.fc, data.tr, data.tc, data.promo, false);
+      render();
+    } else if (data.type === 'sync') {
+      ({ board, turn, epTarget, castle, history, captured, lastMove, over } = data);
+      if (mpColor === 'black') setMpStatus('Connected! You play Black.');
+      render();
+    } else if (data.type === 'new-game') {
+      newGame(false);
+    }
+  });
+
+  mpConn.on('close', () => {
+    setMpStatus('Opponent disconnected.', true);
+    mpConn = null;
+  });
+}
+
+function cancelMp() {
+  if (mpPeer) { mpPeer.destroy(); mpPeer = null; }
+  mpConn = null; mpColor = null;
+  setMpStatus('');
+  resetShareBtn();
+  newGame(false);
+}
+
+function setMpStatus(msg, isError = false) {
+  const el = document.getElementById('mpStatus');
+  if (!el) return;
+  el.textContent = msg;
+  el.className = 'mp-status' + (isError ? ' error' : '');
+}
+
+function resetShareBtn() {
+  const btn = document.getElementById('shareBtn');
+  btn.textContent = 'Share Link to Invite';
+  btn.disabled = false;
+  btn.onclick = hostGame;
+}
+
+// Auto-join if URL has ?room=
+(function checkRoomParam() {
+  const room = new URLSearchParams(window.location.search).get('room');
+  if (room) {
+    document.getElementById('shareBtn').style.display = 'none';
+    joinGame(room);
+  }
+})();
+
 // ─── Start ────────────────────────────────────────────────────────────────────
-newGame();
+newGame(false);
 </script>
 </body>
 </html>
