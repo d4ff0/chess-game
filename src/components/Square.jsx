@@ -3,7 +3,7 @@ import styles from './Square.module.css';
 
 export default function Square({
   row, col, piece,
-  isSelected, isDot, isRing, isInCheck, isLastFrom, isLastTo,
+  isSelected, isDot, isRing, isInCheck, isLastFrom, isLastTo, isCaptureFlash,
   onClick,
 }) {
   const isLight = (row + col) % 2 === 0;
@@ -14,9 +14,10 @@ export default function Square({
     isSelected  ? styles.selected  : '',
     isDot       ? styles.dot       : '',
     isRing      ? styles.ring      : '',
-    isInCheck   ? styles.inCheck   : '',
-    isLastFrom  ? styles.lastFrom  : '',
-    isLastTo    ? styles.lastTo    : '',
+    isInCheck      ? styles.inCheck      : '',
+    isLastFrom     ? styles.lastFrom     : '',
+    isLastTo       ? styles.lastTo       : '',
+    isCaptureFlash ? styles.captureFlash : '',
   ].filter(Boolean).join(' ');
 
   return (

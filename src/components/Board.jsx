@@ -1,4 +1,4 @@
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback, useState, useEffect, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import Square from './Square.jsx';
 import { selectSquare, executeMove, setPendingPromo } from '../store/gameSlice.js';
@@ -8,7 +8,7 @@ import styles from './Board.module.css';
 
 export default function Board() {
   const dispatch = useDispatch();
-  const { board, turn, selected, epTarget, castle, over, pendingPromo, lastMove } = useSelector(s => s.game);
+  const { board, turn, selected, epTarget, castle, over, pendingPromo, lastMove, lastEvent } = useSelector(s => s.game);
   const mpColor = useSelector(s => s.mp.color);
 
   // Legal move targets for the currently selected piece
@@ -26,6 +26,21 @@ export default function Board() {
         if (board[r][c]?.t === 'king' && board[r][c]?.c === turn) return `${r},${c}`;
     return null;
   }, [board, turn, over]);
+
+  // Capture flash: highlight the destination square briefly when a piece is taken
+  const [flashSquare, setFlashSquare] = useState(null);
+  const prevEvent = useRef(null);
+
+  useEffect(() => {
+    if (!lastEvent || lastEvent === prevEvent.current) return;
+    prevEvent.current = lastEvent;
+    if (lastEvent.type === 'capture' && lastMove) {
+      const key = `${lastMove.tr},${lastMove.tc}`;
+      setFlashSquare(key);
+      const id = setTimeout(() => setFlashSquare(null), 420);
+      return () => clearTimeout(id);
+    }
+  }, [lastEvent, lastMove]);
 
   const handleClick = useCallback((row, col) => {
     if (over || pendingPromo) return;
@@ -74,6 +89,7 @@ export default function Board() {
               isInCheck={checkedKing === key}
               isLastFrom={lastMove?.fr === r && lastMove?.fc === c}
               isLastTo={lastMove?.tr === r && lastMove?.tc === c}
+              isCaptureFlash={flashSquare === key}
               onClick={() => handleClick(r, c)}
             />
           );

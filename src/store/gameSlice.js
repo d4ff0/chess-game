@@ -12,6 +12,7 @@ const makeInitialState = () => ({
   pendingPromo: null,
   lastMove: null,
   captured: { white: [], black: [] },
+  lastEvent: null, // null | { type:'capture', piece } | { type:'checkmate', winner } | { type:'stalemate' }
 });
 
 // Shared move application used by both local and remote move actions.
@@ -24,6 +25,20 @@ function runMove(state, fr, fc, tr, tc, promo) {
     { white: { ...state.castle.white }, black: { ...state.castle.black } },
     { white: [...state.captured.white], black: [...state.captured.black] },
   );
+  // Detect event before overwriting state.captured
+  const prevTotal = current(state.captured).white.length + current(state.captured).black.length;
+  const nextTotal = result.captured.white.length + result.captured.black.length;
+  if (result.isOver) {
+    state.lastEvent = result.isMate
+      ? { type: 'checkmate', winner: result.movedColor }
+      : { type: 'stalemate' };
+  } else if (nextTotal > prevTotal) {
+    const arr = result.captured[result.movedColor];
+    state.lastEvent = { type: 'capture', piece: arr[arr.length - 1] };
+  } else {
+    state.lastEvent = null;
+  }
+
   state.board      = result.board;
   state.epTarget   = result.epTarget;
   state.castle     = result.castle;
@@ -77,6 +92,7 @@ const gameSlice = createSlice({
       state.over         = s.over;
       state.selected     = null;
       state.pendingPromo = null;
+      state.lastEvent    = null;
     },
   },
 });

@@ -1,13 +1,22 @@
-import { useEffect } from 'react';
-import { useDispatch } from 'react-redux';
+import { useState, useCallback, useEffect } from 'react';
+import { useSelector } from 'react-redux';
 import Board from './components/Board.jsx';
 import Sidebar from './components/Sidebar.jsx';
 import PromoModal from './components/PromoModal.jsx';
+import GameOverBanner from './components/GameOverBanner.jsx';
+import { useGameEvents } from './hooks/useGameEvents.js';
 import { join as peerJoin } from './peer.js';
 import styles from './App.module.css';
 
 export default function App() {
-  const dispatch = useDispatch();
+  const over = useSelector(s => s.game.over);
+  const [gameOverEvent, setGameOverEvent] = useState(null);
+
+  const handleGameOver = useCallback(event => setGameOverEvent(event), []);
+  useGameEvents({ onGameOver: handleGameOver });
+
+  // Clear the banner whenever a new game starts
+  useEffect(() => { if (!over) setGameOverEvent(null); }, [over]);
 
   // Auto-join a room if the URL contains ?room=<id>
   useEffect(() => {
@@ -23,6 +32,7 @@ export default function App() {
         <Sidebar />
       </div>
       <PromoModal />
+      <GameOverBanner event={gameOverEvent} onDismiss={() => setGameOverEvent(null)} />
     </div>
   );
 }
