@@ -116,10 +116,15 @@
     .sq:hover { filter: brightness(1.08); }
 
     /* piece text */
-    .piece {
-      pointer-events: none;
-      text-shadow: 0 1px 3px rgba(0,0,0,0.4);
+    .piece { pointer-events: none; }
+    .pw {
+      color: #fff;
+      text-shadow:
+        -1.5px -1.5px 0 #111, 0 -1.5px 0 #111, 1.5px -1.5px 0 #111,
+        -1.5px 0 0 #111,                          1.5px 0 0 #111,
+        -1.5px  1.5px 0 #111, 0  1.5px 0 #111, 1.5px  1.5px 0 #111;
     }
+    .pb { color: #111; }
 
     /* ── Sidebar ── */
     .sidebar {
@@ -327,10 +332,7 @@
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
-const SYM = {
-  white: { king:'♔', queen:'♕', rook:'♖', bishop:'♗', knight:'♘', pawn:'♙' },
-  black: { king:'♚', queen:'♛', rook:'♜', bishop:'♝', knight:'♞', pawn:'♟' },
-};
+const SYM = { king:'♚', queen:'♛', rook:'♜', bishop:'♝', knight:'♞', pawn:'♟' };
 
 const PIECE_LETTER = { king:'K', queen:'Q', rook:'R', bishop:'B', knight:'N', pawn:'' };
 
@@ -607,7 +609,10 @@ function showPromo(color) {
   ['queen','rook','bishop','knight'].forEach(type => {
     const btn = document.createElement('div');
     btn.className   = 'promo-btn';
-    btn.textContent = SYM[color][type];
+    const icon = document.createElement('span');
+    icon.className = `piece ${color === 'white' ? 'pw' : 'pb'}`;
+    icon.textContent = SYM[type];
+    btn.appendChild(icon);
     btn.onclick = () => {
       modal.classList.remove('open');
       const {fr,fc,tr,tc} = pending;
@@ -662,8 +667,8 @@ function renderBoard() {
 
       if (board[r][c]) {
         const span = document.createElement('span');
-        span.className   = 'piece';
-        span.textContent = SYM[board[r][c].c][board[r][c].t];
+        span.className   = `piece ${board[r][c].c === 'white' ? 'pw' : 'pb'}`;
+        span.textContent = SYM[board[r][c].t];
         sq.appendChild(span);
       }
 
@@ -706,8 +711,8 @@ function renderSidebar() {
 
   const wCap = document.getElementById('whiteCaptured');
   const bCap = document.getElementById('blackCaptured');
-  wCap.textContent = sortedCap(captured.white).map(t=>SYM.black[t]).join('');
-  bCap.textContent = sortedCap(captured.black).map(t=>SYM.white[t]).join('');
+  wCap.innerHTML = sortedCap(captured.white).map(t=>`<span class="pb">${SYM[t]}</span>`).join('');
+  bCap.innerHTML = sortedCap(captured.black).map(t=>`<span class="pw">${SYM[t]}</span>`).join('');
 
   // move history
   const list = document.getElementById('moveList');
