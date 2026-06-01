@@ -1,0 +1,143 @@
+.sidebar {
+  width: 210px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* ── Card ── */
+.card {
+  background: #16213e;
+  border-radius: 10px;
+  padding: 14px;
+  border: 1px solid #1e2d4a;
+}
+
+.cardTitle {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: #445;
+  margin-bottom: 10px;
+}
+
+/* ── Status card ── */
+.turnRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.turnDot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid #445;
+  flex-shrink: 0;
+}
+.turnDot.white { background: #f5f5f5; }
+.turnDot.black { background: #111; }
+
+.statusMsg {
+  margin-top: 8px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #f0c040;
+}
+
+/* ── Captured pieces ── */
+.capturedLabel {
+  font-size: 10px;
+  color: #445;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 4px;
+}
+.capturedLabel + .capturedLabel,
+.capturedRow + .capturedLabel { margin-top: 8px; }
+
+.capturedRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  min-height: 28px;
+  line-height: 1;
+}
+
+/* ── Buttons ── */
+.btnPrimary {
+  width: 100%;
+  background: #f0c040;
+  color: #0f0f1a;
+  border: none;
+  border-radius: 8px;
+  padding: 11px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 0.5px;
+  transition: background 0.15s, transform 0.1s;
+}
+.btnPrimary:hover  { background: #ddb030; }
+.btnPrimary:active { transform: scale(0.97); }
+
+.btnOutline {
+  width: 100%;
+  background: transparent;
+  color: #7a9cc9;
+  border: 1.5px solid #7a9cc9;
+  border-radius: 8px;
+  padding: 9px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 0.5px;
+  transition: background 0.15s, color 0.15s;
+}
+.btnOutline:hover { background: #7a9cc9; color: #0f0f1a; }
+
+/* ── Online play ── */
+.connBadge {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #7fc97f;
+  padding: 4px 0;
+}
+
+.mpStatus {
+  margin-top: 8px;
+  font-size: 0.78rem;
+  color: #7a9cc9;
+  line-height: 1.5;
+  word-break: break-all;
+}
+.mpError { color: #e07070; }
+
+/* ── Move history ── */
+.moveList {
+  max-height: 240px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #2a3a5a transparent;
+}
+
+.movePair {
+  display: flex;
+  gap: 6px;
+  font-size: 0.82rem;
+  padding: 2px 0;
+  color: #bbb;
+}
+.moveNum   { color: #445; min-width: 22px; }
+.moveWhite,
+.moveBlack { min-width: 58px; font-family: monospace; }
+.latest    { color: #f0c040; font-weight: 600; }
+
+@media (max-width: 700px) {
+  .sidebar { width: 100%; max-width: 580px; flex-direction: row; flex-wrap: wrap; }
+  .card    { flex: 1 1 160px; }
+}

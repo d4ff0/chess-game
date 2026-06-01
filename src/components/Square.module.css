@@ -1,0 +1,49 @@
+.sq {
+  width: 72px;
+  height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+  font-size: 48px;
+  line-height: 1;
+  user-select: none;
+  transition: filter 0.1s;
+}
+.sq:hover { filter: brightness(1.1); }
+
+.light { background: #f0d9b5; }
+.dark  { background: #b58863; }
+
+.selected  { background: #7fc97f !important; }
+.lastFrom  { background: #cdd16f !important; }
+.lastTo    { background: #aaa23a !important; }
+.inCheck   { background: #c0392b !important; }
+
+.dot::after {
+  content: '';
+  position: absolute;
+  width: 28%;
+  height: 28%;
+  background: rgba(0, 0, 0, 0.22);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.ring {
+  box-shadow: inset 0 0 0 5px rgba(0, 0, 0, 0.25);
+}
+
+/* Piece colors */
+.piece { pointer-events: none; }
+
+.pw {
+  color: #fff;
+  text-shadow:
+    -1.5px -1.5px 0 #111, 0 -1.5px 0 #111, 1.5px -1.5px 0 #111,
+    -1.5px  0     0 #111,                    1.5px  0     0 #111,
+    -1.5px  1.5px 0 #111, 0  1.5px 0 #111, 1.5px  1.5px 0 #111;
+}
+
+.pb { color: #111; }
